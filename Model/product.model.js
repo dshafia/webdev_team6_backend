@@ -13,6 +13,9 @@ let Products = new Schema({
     },
     product_quantity: {
         type: Number
+    },
+    img: {
+        type: String
     }
 });
 
