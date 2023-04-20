@@ -1,57 +1,77 @@
-const express = require('express');
-const app = express();
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const artsthopRoutes = express.Router();
-const PORT = 4000;
+import express, { json } from 'express';
+import cors from "cors";
+import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
+import * as fs from 'fs';
+import * as url from 'url';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import multer from "multer";
 
-let Products = require('./Model/product.model');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+
+const dbURL = "mongodb+srv://dudes01:7LZQjgVx3dPKoxkh@cluster0.oms8qj2.mongodb.net/?retryWrites=true&w=majority"; //Make sure your DB is available to any IP just like HW5.
+const client = await MongoClient.connect(dbURL, { useUnifiedTopology: true });
+//Use a database named "final"
+//Use a collection named "animals"
+let db = client.db("artsthop");
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-mongoose.connect('mongodb://127.0.0.1:27017/artsthop', { useNewUrlParser: true });
-const connection = mongoose.connection;
-
-connection.once('open', function () {
-    console.log("MongoDB database connection established successfully");
-})
-
-artsthopRoutes.route('/').get(function (req, res) {
-    Products.find(function (err, products) {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log(products);
-            res.json(products);
-        }
-    });
+let storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads')
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.fieldname + '-' + Date.now())
+  }
 });
 
-artsthopRoutes.route('/:id').get(function(req, res) {
-    let id = req.params.id;
-    Products.findById(id, function(err, product) {
-        console.log(product);
-        res.json(product);
-    });
+let upload = multer({ storage: storage });
+
+if (!fs.existsSync('./uploads')) {
+  fs.mkdirSync('./uploads');
+}
+
+// upload one image
+app.post('/uploadimage', async (req, res) => {
+  try {
+    let collection = await db.collection("paintings");
+    let result = await collection.insertOne(req.body);
+    console.log(result);
+    res.status(201).json({ message: 'Painting uploaded successfully' });
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({ message: err.message });
+  }
 });
 
-artsthopRoutes.route('/add').post(function (req, res) {
-    let products = new Products(req.body);
-
-    products.save()
-        .then(product => {
-            console.log(product);
-            res.status(200).json({ 'product': 'product added successfully' });
-        })
-        .catch(err => {
-            res.status(400).send('adding new product failed');
-        });
+//search route
+app.get('/getall', async (req, res) => {
+  let collection = await db.collection("paintings");
+  let results = await collection.find({})
+    .limit(50)
+    .toArray();
+  // console.log(results);
+  res.send(results).status(200);
 });
 
-app.use('/artsthop', artsthopRoutes);
+// get one image
+app.get("/getimage/:name", async (req, res) => {
+  let collection = await db.collection("paintings");
+  let result = await collection.find({ product_title: req.params.name }).toArray();
 
-app.listen(PORT, function () {
-    console.log("Server is running on Port: " + PORT);
+  if (!result) res.send("Not found").status(404);
+  else res.send(result).status(200);
 });
+
+const port = 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+//npm run dev to start React app and Express server
