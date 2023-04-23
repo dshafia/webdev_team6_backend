@@ -6,7 +6,6 @@ import * as fs from 'fs';
 import * as url from 'url';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import multer from "multer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,17 +20,6 @@ let db = client.db("artsthop");
 
 app.use(cors());
 app.use(express.json());
-
-let storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads')
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.fieldname + '-' + Date.now())
-  }
-});
-
-let upload = multer({ storage: storage });
 
 if (!fs.existsSync('./uploads')) {
   fs.mkdirSync('./uploads');
