@@ -57,6 +57,29 @@ app.get("/getimage/:name", async (req, res) => {
   else res.send(result).status(200);
 });
 
+// get orders
+app.get("/getorders/:emailid", async (req, res) => {
+  console.log('parar', req.params.emailid)
+  let collection = await db.collection("orders");
+  let result = await collection.find({ email: req.params.emailid }).toArray();
+
+  if (!result) res.send("Not found").status(404);
+  else res.send(result).status(200);
+});
+
+// submit order
+app.post('/submitorder', async (req, res) => {
+  try {
+    let collection = await db.collection("orders");
+    let result = await collection.insertOne(req.body);
+    console.log(result);
+    res.status(201).json({ message: 'Order submitted successfully' });
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 const port = 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
